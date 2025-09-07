@@ -1,0 +1,25 @@
+<!-- Simple page de test pour l'upload multiple -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Upload Multiple</title>
+</head>
+<body>
+    <h2>Test Upload Multiple Images</h2>
+    <form method="POST" action="/create-announcement" enctype="multipart/form-data">
+        <label>Titre:</label><br>
+        <input type="text" name="title" value="Test Multiple Images" required><br><br>
+        
+        <label>Description:</label><br>
+        <textarea name="description" required>Description de test pour plusieurs images</textarea><br><br>
+        
+        <label>Téléphone:</label><br>
+        <input type="tel" name="phone" value="0612345678" required><br><br>
+        
+        <label>Images (max 5):</label><br>
+        <input type="file" name="images" accept="image/*" multiple required><br><br>
+        
+        <button type="submit">Créer Annonce</button>
+    </form>
+</body>
+</html>

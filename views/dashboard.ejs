@@ -1,0 +1,248 @@
+<%- include('partials/header', {title: 'Mon tableau de bord', user: user}) %>
+
+<div style="margin-bottom: 2rem;">
+    <h1 class="page-title">
+        <i class="fas fa-tachometer-alt"></i> Mon Espace
+    </h1>
+    <p style="text-align: center; color: #666; font-size: 1.1rem;">
+        Bienvenue, <strong><%= user.username %></strong> ! Gérez vos annonces d'antiquités
+    </p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+        <span class="stat-number"><%= announcements.filter(a => a.status === 'approved').length %></span>
+        <div class="stat-label">Annonces validées</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+        <span class="stat-number"><%= announcements.filter(a => a.status === 'pending').length %></span>
+        <div class="stat-label">En attente</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);">
+        <span class="stat-number"><%= announcements.filter(a => a.status === 'rejected').length %></span>
+        <div class="stat-label">Refusées</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%);">
+        <span class="stat-number"><%= announcements.length %></span>
+        <div class="stat-label">Total</div>
+    </div>
+</div>
+
+<div style="margin: 2rem 0; text-align: center;">
+    <a href="/create-announcement" class="btn" style="background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%); padding: 1rem 2rem; font-size: 1.1rem;">
+        <i class="fas fa-plus"></i> Créer une nouvelle annonce
+    </a>
+</div>
+
+<% if (announcements.length === 0) { %>
+    <div class="no-announcements">
+        <i class="fas fa-box-open"></i>
+        <h3>Aucune annonce pour le moment</h3>
+        <p>Commencez par créer votre première annonce d'antiquité !</p>
+        <a href="/create-announcement" class="btn">
+            <i class="fas fa-plus"></i> Créer ma première annonce
+        </a>
+    </div>
+<% } else { %>
+    <div class="announcements-section">
+        <h2 style="color: #8b4513; margin-bottom: 1.5rem; text-align: center;">
+            <i class="fas fa-list"></i> Mes Annonces
+        </h2>
+        
+        <!-- Table Header -->
+        <div class="announcements-table">
+            <div class="table-header" style="display: grid; grid-template-columns: auto 1fr auto auto auto auto; gap: 1rem; align-items: center; padding: 1rem; background: #8b4513; color: white; border-radius: 8px 8px 0 0; font-weight: bold;">
+                <div>Image</div>
+                <div>Titre</div>
+                <div>Statut</div>
+                <div>Prix</div>
+                <div>Date</div>
+                <div>Actions</div>
+            </div>
+            <% announcements.forEach(function(announcement, index) { %>
+                <div style="display: grid; grid-template-columns: auto 1fr auto auto auto auto; gap: 1rem; align-items: center; padding: 1rem; border-bottom: 1px solid #eee; background: <%= index % 2 === 0 ? '#fafafa' : 'white' %>;">
+                    <div>
+                        <% if (announcement.image_path) { %>
+                            <img src="/uploads/<%= announcement.image_path %>" 
+                                 style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" 
+                                 alt="<%= announcement.title %>">
+                        <% } else { %>
+                            <div style="width: 60px; height: 60px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-image" style="color: #ccc;"></i>
+                            </div>
+                        <% } %>
+                    </div>
+                    <div>
+                        <div style="font-weight: bold; color: #333; margin-bottom: 0.25rem;">
+                            <%= announcement.title %>
+                        </div>
+                        <div style="color: #666; font-size: 0.9rem;">
+                            <%= announcement.description.length > 80 ? 
+                                announcement.description.substring(0, 80) + '...' : 
+                                announcement.description %>
+                        </div>
+                    </div>
+                    <div>
+                        <% if (announcement.status === 'pending') { %>
+                            <span class="status-badge pending">
+                                <i class="fas fa-clock"></i> En attente
+                            </span>
+                        <% } else if (announcement.status === 'approved') { %>
+                            <span class="status-badge approved">
+                                <i class="fas fa-check-circle"></i> Validée
+                            </span>
+                        <% } else if (announcement.status === 'rejected') { %>
+                            <span class="status-badge rejected">
+                                <i class="fas fa-times-circle"></i> Refusée
+                            </span>
+                        <% } %>
+                    </div>
+                    <div>
+                        <% if (announcement.price) { %>
+                            <span style="font-weight: bold; color: #8b4513; font-size: 1.1rem;">
+                                <%= announcement.price.toFixed(2) %> DH
+                            </span>
+                        <% } else { %>
+                            <span style="color: #999; font-style: italic;">En attente</span>
+                        <% } %>
+                    </div>
+                    <div style="color: #666; font-size: 0.9rem;">
+                        <%= new Date(announcement.created_at).toLocaleDateString('fr-FR') %>
+                    </div>
+                    <div>
+                        <% if (announcement.status === 'pending' || announcement.status === 'rejected') { %>
+                            <button class="btn btn-sm btn-outline" 
+                                    onclick="editAnnouncement(<%= announcement.id %>)"
+                                    style="margin-right: 0.5rem;">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm" 
+                                    onclick="deleteAnnouncement(<%= announcement.id %>)"
+                                    style="background: #dc3545; border-color: #dc3545;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        <% } else { %>
+                            <span style="color: #28a745; font-size: 0.9rem;">
+                                <i class="fas fa-eye"></i> Publiée
+                            </span>
+                        <% } %>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    </div>
+
+    <!-- Vue en cartes pour mobile -->
+    <div class="announcements-cards" style="display: none;">
+        <% announcements.forEach(function(announcement) { %>
+            <div class="announcement-card">
+                <% if (announcement.image_path) { %>
+                    <div class="card-image">
+                        <img src="/uploads/<%= announcement.image_path %>" alt="<%= announcement.title %>">
+                    </div>
+                <% } else { %>
+                    <div class="card-image-placeholder">
+                        <i class="fas fa-image"></i>
+                        <p>Aucune image</p>
+                    </div>
+                <% } %>
+                
+                <div class="card-content">
+                    <div class="card-header">
+                        <h4><%= announcement.title %></h4>
+                        <% if (announcement.status === 'pending') { %>
+                            <span class="status-badge pending">
+                                <i class="fas fa-clock"></i> En attente
+                            </span>
+                        <% } else if (announcement.status === 'approved') { %>
+                            <span class="status-badge approved">
+                                <i class="fas fa-check-circle"></i> Validée
+                            </span>
+                        <% } else if (announcement.status === 'rejected') { %>
+                            <span class="status-badge rejected">
+                                <i class="fas fa-times-circle"></i> Refusée
+                            </span>
+                        <% } %>
+                    </div>
+                    
+                    <p class="card-description">
+                        <%= announcement.description.length > 100 ? 
+                            announcement.description.substring(0, 100) + '...' : 
+                            announcement.description %>
+                    </p>
+                    
+                    <div class="card-meta">
+                        <% if (announcement.price) { %>
+                            <span class="price">
+                                <i class="fas fa-coins"></i> <%= announcement.price.toFixed(2) %> DH
+                            </span>
+                        <% } else { %>
+                            <span style="color: #999; font-style: italic;">Prix en attente</span>
+                        <% } %>
+                        <small><i class="fas fa-calendar"></i> <%= new Date(announcement.created_at).toLocaleDateString('fr-FR') %></small>
+                    </div>
+                    
+                    <% if (announcement.status === 'pending' || announcement.status === 'rejected') { %>
+                        <div class="card-actions">
+                            <button class="btn btn-outline" onclick="editAnnouncement(<%= announcement.id %>)">
+                                <i class="fas fa-edit"></i> Modifier
+                            </button>
+                            <button class="btn" onclick="deleteAnnouncement(<%= announcement.id %>)" 
+                                    style="background: #dc3545; border-color: #dc3545;">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        <% }); %>
+    </div>
+<% } %>
+
+<script>
+function editAnnouncement(id) {
+    // TODO: Implémenter la fonctionnalité d'édition
+    alert('Fonctionnalité d\'édition à venir !');
+}
+
+function deleteAnnouncement(id) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette annonce ?')) {
+        fetch(`/delete-announcement/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la suppression');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression');
+        });
+    }
+}
+
+// Responsive: basculer entre vue table et cartes
+function checkScreenSize() {
+    const table = document.querySelector('.announcements-table');
+    const cards = document.querySelector('.announcements-cards');
+    
+    if (window.innerWidth <= 768) {
+        if (table) table.style.display = 'none';
+        if (cards) cards.style.display = 'grid';
+    } else {
+        if (table) table.style.display = 'block';
+        if (cards) cards.style.display = 'none';
+    }
+}
+
+window.addEventListener('resize', checkScreenSize);
+checkScreenSize();
+</script>
+
+<%- include('partials/footer') %>

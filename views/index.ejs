@@ -1,0 +1,171 @@
+<%- include('partials/header', {title: 'Accueil', user: typeof user !== 'undefined' ? user : null}) %>
+
+<div class="hero">
+    <h1><i class="fas fa-gem"></i> SOUQNET</h1>
+    <p>Découvrez des pièces d'histoire uniques, sélectionnées avec passion par nos experts</p>
+    <% if (typeof user === 'undefined' || !user) { %>
+        <a href="/register" class="btn">Commencer l'aventure</a>
+    <% } else { %>
+        <a href="/create-announcement" class="btn">Créer une annonce</a>
+    <% } %>
+</div>
+
+<section>
+    <h2 class="page-title">
+        <i class="fas fa-star"></i> Antiquités Sélectionnées
+        <small style="font-size: 1rem; color: #888; font-weight: normal;">(<%= announcements.length %> articles)</small>
+    </h2>
+    
+    <% if (announcements && announcements.length > 0) { %>
+        <div class="announcements-grid">
+            <% announcements.forEach(function(announcement) { %>
+                <div class="announcement-card">
+                    <% 
+                        // Traitement des images (nouvelles annonces avec JSON ou anciennes avec chemin simple)
+                        let images = [];
+                        if (announcement.image_path) {
+                            try {
+                                // Tenter de parser en JSON pour les nouvelles annonces
+                                images = JSON.parse(announcement.image_path);
+                                if (!Array.isArray(images)) {
+                                    // Si ce n'est pas un array, c'est probablement une ancienne annonce
+                                    images = [announcement.image_path];
+                                }
+                            } catch (e) {
+                                // Si le parsing JSON échoue, c'est une ancienne annonce avec un seul chemin
+                                images = [announcement.image_path];
+                            }
+                        }
+                    %>
+                    
+                    <% if (images.length > 0) { %>
+                        <div style="position: relative;">
+                            <img src="/uploads/<%= images[0] %>" alt="<%= announcement.title %>" class="announcement-image">
+                            <% if (images.length > 1) { %>
+                                <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.8); color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">
+                                    <i class="fas fa-images"></i> <%= images.length %>
+                                </div>
+                            <% } %>
+                        </div>
+                    <% } else { %>
+                        <div class="announcement-image" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(45deg, #f0f0f0, #e0e0e0);">
+                            <i class="fas fa-image" style="font-size: 3rem; color: #ccc;"></i>
+                        </div>
+                    <% } %>
+                    
+                    <div class="announcement-content">
+                        <h3 class="announcement-title"><%= announcement.title %></h3>
+                        <div class="announcement-price">
+                            <i class="fas fa-tag"></i> <%= announcement.price.toFixed(2) %> DH
+                        </div>
+                        <p class="announcement-description">
+                            <%= announcement.description.length > 120 ? 
+                                announcement.description.substring(0, 120) + '...' : 
+                                announcement.description %>
+                        </p>
+                        
+                        <div class="announcement-meta">
+                            <span><i class="fas fa-user"></i> <%= announcement.user_name %></span>
+                            <span><i class="fas fa-calendar"></i> <%= new Date(announcement.validated_at).toLocaleDateString('fr-FR') %></span>
+                        </div>
+                        
+                        <!-- Bouton vert pour voir les détails -->
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="/announcement/<%= announcement.id %>" 
+                               style="background: linear-gradient(135deg, #28a745, #20c997); color: white; text-decoration: none; padding: 0.75rem 1.5rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 500; transition: transform 0.3s, box-shadow 0.3s; flex: 1;"
+                               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(40, 167, 69, 0.3)'"
+                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                <i class="fas fa-eye"></i> Voir les détails
+                            </a>
+                            
+                            <!-- Bouton rouge de suppression (visible uniquement pour l'admin) -->
+                            <% if (typeof user !== 'undefined' && user && user.isAdmin) { %>
+                                <button onclick="deleteAnnouncement(<%= announcement.id %>)"
+                                        style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border: none; padding: 0.75rem 1rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 500; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; min-width: 120px;"
+                                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(220, 53, 69, 0.3)'"
+                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    <% } else { %>
+        <div class="no-announcements">
+            <i class="fas fa-search"></i>
+            <h3>Aucune antiquité disponible pour le moment</h3>
+            <p>Soyez le premier à partager vos trésors avec notre communauté !</p>
+            <% if (typeof user !== 'undefined' && user && !user.isAdmin) { %>
+                <a href="/create-announcement" class="btn">Créer la première annonce</a>
+            <% } %>
+        </div>
+    <% } %>
+</section>
+
+<% if (typeof user !== 'undefined' && user && !user.isAdmin) { %>
+    <section style="margin-top: 4rem;">
+        <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); text-align: center;">
+            <h4 style="color: #8b4513; margin-bottom: 1rem;">
+                <i class="fas fa-lightbulb" style="color: #FFD700;"></i> Vous avez une antiquité à vendre ?
+            </h4>
+            <p style="margin-bottom: 1.5rem; color: #666;">Créez votre annonce en quelques clics. Notre équipe la validera rapidement.</p>
+            <a href="/create-announcement" class="btn">
+                <i class="fas fa-plus"></i> Créer une annonce
+            </a>
+        </div>
+    </section>
+<% } %>
+
+<!-- Script pour la suppression d'annonces (admin uniquement) -->
+<% if (typeof user !== 'undefined' && user && user.isAdmin) { %>
+<script>
+function deleteAnnouncement(announcementId) {
+    // Confirmation de suppression avec style moderne
+    const confirmDelete = confirm(
+        '⚠️ Êtes-vous sûr de vouloir supprimer définitivement cette annonce ?\n\n' +
+        '⚠️ Cette action est irréversible !\n' +
+        '📷 Les images associées seront également supprimées.'
+    );
+    
+    if (confirmDelete) {
+        // Créer un formulaire pour envoyer la requête POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/delete/' + announcementId;
+        form.style.display = 'none';
+        
+        // Ajouter le token CSRF si nécessaire (optionnel)
+        // const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        // if (csrfToken) {
+        //     const input = document.createElement('input');
+        //     input.type = 'hidden';
+        //     input.name = '_token';
+        //     input.value = csrfToken.getAttribute('content');
+        //     form.appendChild(input);
+        // }
+        
+        // Ajouter le formulaire au DOM et le soumettre
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Animation d'entrée pour les boutons de suppression
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteButtons = document.querySelectorAll('button[onclick*="deleteAnnouncement"]');
+    deleteButtons.forEach((button, index) => {
+        button.style.opacity = '0';
+        button.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+            button.style.transition = 'opacity 0.5s, transform 0.5s';
+            button.style.opacity = '1';
+            button.style.transform = 'translateX(0)';
+        }, index * 100);
+    });
+});
+</script>
+<% } %>
+
+<%- include('partials/footer') %>

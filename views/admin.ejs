@@ -1,0 +1,309 @@
+<%- include('partials/header', {title: 'Administration', user: {isAdmin: true}}) %>
+
+<div class="admin-dashboard">
+    <div style="margin-bottom: 2rem;">
+        <h1 class="page-title">
+            <i class="fas fa-cog"></i> Administration
+        </h1>
+        <p style="text-align: center; color: #666; font-size: 1.1rem;">
+            Gérez les annonces en attente de validation
+        </p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+            <span class="stat-number"><%= pendingAnnouncements.length %></span>
+            <div class="stat-label">En attente</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+            <span class="stat-number"><%= approvedCount %></span>
+            <div class="stat-label">Validées</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);">
+            <span class="stat-number"><%= rejectedCount %></span>
+            <div class="stat-label">Refusées</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+            <span class="stat-number"><%= totalUsers %></span>
+            <div class="stat-label">Utilisateurs</div>
+        </div>
+    </div>
+
+    <% if (pendingAnnouncements.length === 0) { %>
+        <div class="no-announcements">
+            <i class="fas fa-check-circle"></i>
+            <h3>Aucune annonce en attente</h3>
+            <p>Toutes les annonces ont été traitées !</p>
+        </div>
+    <% } else { %>
+        <h2 style="color: #8b4513; margin: 2rem 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-hourglass-half"></i> Annonces en attente
+        </h2>
+
+        <div class="announcements-grid">
+            <% pendingAnnouncements.forEach(function(announcement) { %>
+                <div class="announcement-card" style="border: 3px solid #ffc107;">
+                    <% 
+                        // Traitement des images (nouvelles annonces avec JSON ou anciennes avec chemin simple)
+                        let images = [];
+                        if (announcement.image_path) {
+                            try {
+                                // Tenter de parser en JSON pour les nouvelles annonces
+                                images = JSON.parse(announcement.image_path);
+                                if (!Array.isArray(images)) {
+                                    // Si ce n'est pas un array, c'est probablement une ancienne annonce
+                                    images = [announcement.image_path];
+                                }
+                            } catch (e) {
+                                // Si le parsing JSON échoue, c'est une ancienne annonce avec un seul chemin
+                                images = [announcement.image_path];
+                            }
+                        }
+                    %>
+                    
+                    <% if (images.length > 0) { %>
+                        <div style="position: relative;">
+                            <img src="/uploads/<%= images[0] %>" alt="<%= announcement.title %>" class="announcement-image">
+                            <% if (images.length > 1) { %>
+                                <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem;">
+                                    <i class="fas fa-images"></i> <%= images.length %>
+                                </div>
+                            <% } %>
+                        </div>
+                    <% } else { %>
+                        <div class="announcement-image" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(45deg, #f0f0f0, #e0e0e0);">
+                            <i class="fas fa-image" style="font-size: 3rem; color: #ccc;"></i>
+                        </div>
+                    <% } %>
+                    
+                    <div class="announcement-content">
+                        <h3 class="announcement-title"><%= announcement.title %></h3>
+                        <p class="announcement-description"><%= announcement.description %></p>
+                        
+                        <!-- Galerie d'images pour l'admin -->
+                        <% if (images.length > 1) { %>
+                            <div style="margin-bottom: 1rem;">
+                                <h6 style="color: #8b4513; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-images"></i> Toutes les photos (<%= images.length %>)
+                                </h6>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 0.5rem; max-width: 300px;">
+                                    <% images.forEach((image, index) => { %>
+                                        <img src="/uploads/<%= image %>" 
+                                             alt="Photo <%= index + 1 %>"
+                                             style="width: 100%; height: 60px; object-fit: cover; border-radius: 6px; border: 2px solid #ddd; cursor: pointer;"
+                                             onclick="window.open('/uploads/<%= image %>', '_blank')"
+                                             title="Cliquer pour agrandir">
+                                    <% }) %>
+                                </div>
+                            </div>
+                        <% } %>
+                        
+                        <div class="announcement-meta" style="margin-bottom: 1rem;">
+                            <span><i class="fas fa-user"></i> <%= announcement.user_name %></span>
+                            <span><i class="fas fa-calendar"></i> <%= new Date(announcement.created_at).toLocaleDateString('fr-FR') %></span>
+                            <% if (announcement.phone) { %>
+                            <span><i class="fas fa-phone"></i> <%= announcement.phone %></span>
+                            <% } %>
+                        </div>
+
+                        <form method="POST" action="/admin/validate/<%= announcement.id %>" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <!-- Pas besoin de champ caché announcementId car l'ID est dans l'URL -->
+                            
+                            <div class="form-group" style="margin-bottom: 1rem;">
+                                <label for="price_<%= announcement.id %>" style="font-weight: bold; color: #8b4513;">
+                                    <i class="fas fa-coins"></i> Prix de vente (DH)
+                                </label>
+                                <input type="number" 
+                                       id="price_<%= announcement.id %>" 
+                                       name="price" 
+                                       class="form-control" 
+                                       step="0.01" 
+                                       min="0" 
+                                       placeholder="Ex: 1500.00"
+                                       style="margin-top: 0.5rem;"
+                                       required>
+                            </div>
+
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button type="submit" class="btn" style="flex: 1;">
+                                    <i class="fas fa-check"></i> Valider
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <!-- Formulaire séparé pour rejeter -->
+                        <form method="POST" action="/admin/reject/<%= announcement.id %>" style="margin-top: 0.5rem;">
+                            <button type="submit" class="btn btn-danger" style="width: 100%;" 
+                                    onclick="return confirm('Êtes-vous sûr de vouloir rejeter cette annonce ?')">
+                                <i class="fas fa-times"></i> Refuser
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    <% } %>
+
+    <% if (approvedCount > 0) { %>
+        <div style="margin-top: 3rem; text-align: center;">
+            <h3 style="color: #8b4513; margin-bottom: 1rem;">
+                <i class="fas fa-chart-line"></i> Dernières statistiques
+            </h3>
+            <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+                    <div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #28a745;"><%= approvedCount %></div>
+                        <div style="color: #666;">Annonces validées</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #dc3545;"><%= rejectedCount %></div>
+                        <div style="color: #666;">Annonces refusées</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #8b4513;"><%= totalUsers %></div>
+                        <div style="color: #666;">Utilisateurs inscrits</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <% } %>
+</div>
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #8B4513;">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-gem me-2"></i>Antiquités Marketplace
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>Accueil
+                </a>
+                <a class="nav-link" href="/logout">
+                    <i class="fas fa-sign-out-alt me-1"></i>Déconnexion
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1>
+                        <i class="fas fa-cog me-2" style="color: #8B4513;"></i>
+                        Panel d'Administration
+                    </h1>
+                    <div class="badge bg-warning fs-6">
+                        <%= pendingAnnouncements.length %> annonce(s) en attente
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <% if (pendingAnnouncements.length === 0) { %>
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle display-1 text-success mb-3"></i>
+                <h3 class="text-muted">Aucune annonce en attente</h3>
+                <p class="text-muted">Toutes les annonces ont été traitées. Bravo !</p>
+                <a href="/" class="btn btn-primary" style="background-color: #8B4513; border-color: #8B4513;">
+                    <i class="fas fa-eye me-2"></i>Voir les annonces validées
+                </a>
+            </div>
+        <% } else { %>
+            <div class="alert alert-info" role="alert">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Instructions :</strong> Examinez chaque annonce et définissez un prix si vous la validez. 
+                Les annonces validées apparaîtront immédiatement sur la page d'accueil.
+            </div>
+
+            <div class="row">
+                <% pendingAnnouncements.forEach(announcement => { %>
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100 admin-card shadow">
+                            <% if (announcement.image_path) { %>
+                                <img src="/uploads/<%= announcement.image_path %>" 
+                                     class="card-img-top" 
+                                     alt="<%= announcement.title %>">
+                            <% } else { %>
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-image fa-3x text-muted"></i>
+                                </div>
+                            <% } %>
+                            
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-tag me-2" style="color: #8B4513;"></i>
+                                    <%= announcement.title %>
+                                </h5>
+                                <p class="card-text">
+                                    <%= announcement.description %>
+                                </p>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i>
+                                            <strong>Vendeur :</strong><br>
+                                            <%= announcement.user_name %>
+                                        </small>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-envelope me-1"></i>
+                                            <strong>Email :</strong><br>
+                                            <%= announcement.user_email %>
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                <small class="text-muted d-block mb-3">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    Soumis le <%= new Date(announcement.created_at).toLocaleDateString('fr-FR') %> 
+                                    à <%= new Date(announcement.created_at).toLocaleTimeString('fr-FR') %>
+                                </small>
+
+                                <div class="validation-form">
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-gavel me-2"></i>Actions d'administration
+                                    </h6>
+                                    
+                                    <form method="POST" action="/admin/validate/<%= announcement.id %>" class="mb-2">
+                                        <div class="input-group mb-2">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-coins"></i>
+                                            </span>
+                                            <input type="number" 
+                                                   class="form-control" 
+                                                   name="price" 
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   placeholder="Prix de vente (DH)"
+                                                   required>
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="fas fa-check me-1"></i>Valider
+                                            </button>
+                                        </div>
+                                    </form>
+                                    
+                                    <form method="POST" action="/admin/reject/<%= announcement.id %>" class="d-inline">
+                                        <button type="submit" class="btn btn-danger btn-sm" 
+                                                onclick="return confirm('Êtes-vous sûr de vouloir refuser cette annonce ?')">
+                                            <i class="fas fa-times me-1"></i>Refuser l'annonce
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+    </div>
+
+<%- include('partials/footer') %>
